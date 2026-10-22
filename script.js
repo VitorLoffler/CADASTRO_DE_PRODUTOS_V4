@@ -15,34 +15,27 @@ class Produto {
 }
 
 //
-// FASE 2: Gerenciamento de Estado (Memória)
+// FASE 2: Gerenciamento de Estado (Memória) + Estado de Edição
 //
 const listaDeProdutos = [];
 
+// 🆕 Variável de controle do PDF - null = Modo Cadastro, número = Modo Edição
+let indiceEdicao = null;
+
 //
-// 🆕 FASE 2.1: Persistência com localStorage
+// FASE 2.1: Persistência com localStorage
 //
-// Definimos uma constante para evitar erros de digitação ao usar a chave do localStorage
 const CHAVE_STORAGE = "sistema_estoque_produtos";
 
-// 1. Função para SALVAR os dados no navegador
 function salvarNoLocalStorage() {
-    // JSON.stringify converte o Array de Objetos JS em uma String JSON
     const listaEmTexto = JSON.stringify(listaDeProdutos);
     localStorage.setItem(CHAVE_STORAGE, listaEmTexto);
 }
 
-// 2. Função para CARREGAR os dados salvos quando a página abrir
 function carregarDoLocalStorage() {
     const dadosSalvos = localStorage.getItem(CHAVE_STORAGE);
-
-    // Se existirem dados salvos anteriormente no navegador...
     if (dadosSalvos) {
-        // Converte a string JSON de volta para um Array de objetos genéricos
         const produtosObjetos = JSON.parse(dadosSalvos);
-
-        // ATENÇÃO (Conceito POO): Reinstanciamos cada produto com "new Produto()"
-        // para garantir que os objetos recuperem o método .calcularSubtotal()
         produtosObjetos.forEach((prod) => {
             const produtoInstanciado = new Produto(prod.nome, prod.preco, prod.quantidade);
             listaDeProdutos.push(produtoInstanciado);
@@ -56,26 +49,50 @@ function carregarDoLocalStorage() {
 const formProduto = document.getElementById("produto-form");
 const btnLimparTudo = document.getElementById("limpar-tabela");
 const totalEstoqueEl = document.getElementById("total-estoque");
+const btnSubmit = document.querySelector(".btn-primary");
 
 //
-// FASE 4: Escuta de Eventos
+// FASE 4: Escuta de Eventos - COM VALIDAÇÃO DO PDF
 //
 
-// 1. Adicionar Produto pelo Formulário
+// 1. Adicionar / Atualizar Produto pelo Formulário
 formProduto.addEventListener("submit", function (event) {
     event.preventDefault();
 
-    const nomeInput = document.getElementById("nome").value;
-    const precoInput = document.getElementById("preco").value;
-    const quantidadeInput = document.getElementById("quantidade").value;
+    // 🆕 FASE VALIDAÇÃO - Sanitização com .trim() + parse
+    const nome = document.getElementById("nome").value.trim();
+    const preco = parseFloat(document.getElementById("preco").value);
+    const quantidade = parseInt(document.getElementById("quantidade").value);
 
-    const novoProduto = new Produto(nomeInput, precoInput, quantidadeInput);
+    // 🆕 Guard Clause - Retorno antecipado (evita if/else aninhado)
+    if (!nome) {
+        alert("Por favor, informe um nome válido para o produto.");
+        return;
+    }
 
-    listaDeProdutos.push(novoProduto);
+    if (isNaN(preco) || preco <= 0 || isNaN(quantidade) || quantidade <= 0) {
+        alert("O preço e a quantidade devem ser valores numéricos maiores que zero.");
+        return;
+    }
 
-    // 🆕 Salva no localStorage sempre que um novo produto for adicionado
+    // Dados válidos: cria objeto
+    const novoProduto = new Produto(nome, preco, quantidade);
+
+    // 🆕 FASE 4 - Lógica de Atualização (Update) do PDF
+    if (indiceEdicao === null) {
+        // Modo Inclusão
+        listaDeProdutos.push(novoProduto);
+    } else {
+        // Modo Edição - substitui elemento existente
+        listaDeProdutos[indiceEdicao] = novoProduto;
+    }
+
+    // Restauração de Estado
+    indiceEdicao = null;
+    btnSubmit.textContent = "Adicionar Produto";
+
+    // Persistência + Interface
     salvarNoLocalStorage();
-
     atualizarInterface();
     formProduto.reset();
 });
@@ -89,29 +106,51 @@ btnLimparTudo.addEventListener("click", function () {
 
     if (confirm("Tem certeza que deseja remover todos os produtos?")) {
         listaDeProdutos.length = 0;
-
-        // 🆕 Remove a chave inteira do localStorage
         localStorage.removeItem(CHAVE_STORAGE);
-
+        indiceEdicao = null;
+        btnSubmit.textContent = "Adicionar Produto";
         atualizarInterface();
+        formProduto.reset();
     }
 });
 
 //
-// FASE 5: Funções de Atualização e Renderização da Interface
+// FASE 5: Funções de Atualização e Renderização
 //
 
-// Função responsável por remover um único produto pelo índice
+// Remove um único produto
 function removerProduto(index) {
     listaDeProdutos.splice(index, 1);
-
-    // 🆕 Salva a nova lista (sem o item removido) no localStorage
     salvarNoLocalStorage();
+
+    // Se estava editando o item removido, cancela edição
+    if (indiceEdicao === index) {
+        indiceEdicao = null;
+        btnSubmit.textContent = "Adicionar Produto";
+        formProduto.reset();
+    }
 
     atualizarInterface();
 }
 
-// Função responsável por calcular e renderizar o total geral em estoque
+// 🆕 FASE 3 - Preparar Edição (do PDF)
+function prepararEdicao(index) {
+    const produto = listaDeProdutos[index];
+
+    // 1. Preenche os campos do formulário com dados existentes
+    document.getElementById("nome").value = produto.nome;
+    document.getElementById("preco").value = produto.preco;
+    document.getElementById("quantidade").value = produto.quantidade;
+
+    // 2. Transfere estado para Modo Edição e atualiza interface
+    indiceEdicao = index;
+    btnSubmit.textContent = "Salvar Alterações";
+
+    // Foca no campo nome para melhor UX
+    document.getElementById("nome").focus();
+}
+
+// Calcula total geral
 function atualizarTotalEstoque() {
     const total = listaDeProdutos.reduce((acc, produto) => {
         return acc + produto.calcularSubtotal();
@@ -120,10 +159,9 @@ function atualizarTotalEstoque() {
     totalEstoqueEl.textContent = `Total em Estoque: R$ ${total.toFixed(2)}`;
 }
 
-// Função responsável por re-desenhar a tabela
+// 🆕 Desafio Prático: renderizar com botão Editar
 function renderizarTabela() {
     const tabelaBody = document.querySelector("#tabela-produtos tbody");
-
     tabelaBody.innerHTML = "";
 
     listaDeProdutos.forEach((produto, index) => {
@@ -135,27 +173,30 @@ function renderizarTabela() {
             <td>${produto.quantidade}</td>
             <td>R$ ${produto.calcularSubtotal().toFixed(2)}</td>
             <td>
+                <button class="btn-editar">Editar</button>
                 <button class="btn-remover">Remover</button>
             </td>
         `;
+        btnEditar.addEventListener("click", () => prepararEdicao(index));
+
 
         const btnRemover = linha.querySelector(".btn-remover");
-        btnRemover.addEventListener("click", () => removerProduto(index));
+        const btnEditar = linha.querySelector(".btn-editar");
 
+        btnRemover.addEventListener("click", () => removerProduto(index));
+        
         tabelaBody.appendChild(linha);
     });
 }
 
-// Função principal que sincroniza a tela com os dados
+// Sincroniza tela com dados
 function atualizarInterface() {
     renderizarTabela();
     atualizarTotalEstoque();
 }
 
 //
-// 🆕 FASE 6: Inicialização da Aplicação
+// FASE 6: Inicialização
 //
-// Ao carregar o script pela primeira vez, restaura os dados do localStorage
-// e atualiza a interface gráfica.
 carregarDoLocalStorage();
 atualizarInterface();
