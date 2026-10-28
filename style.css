@@ -163,6 +163,61 @@ tbody tr:hover {
     transform: scale(1.10);
 }
 
+.btn-editar {
+
+    background-color: #ffd900;
+    color: #ffffff;
+    padding: 5px 10px;
+    font-size: 12px;
+    border-radius: 5px;
+
+}
+
+.btn-editar:hover {
+    background-color: #cab817;
+    box-shadow: 0 0 15px #f8ee5a;
+    transform: scale(1.10);
+}
+
+/*  MODIFICAÇÕES NA VERSÃO 4 */
+
+.busca-container {
+
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+    margin-bottom: 20px;
+    padding: 12px;
+    background-color: #e8f1ff;
+    border: 1px solid #fbfde9;
+    border-radius: 6px;
+
+}
+
+.busca-container label {
+
+    font-weight: bold;
+    font-size: 13px;
+    color: #2563eb;
+
+}
+
+.busca-container input {
+
+    padding: 9px;
+    border: 1px solid #cbd5e1;
+    border-radius: 4px;
+    font-size: 14px;
+
+}
+
+.busca-container input:focus {
+
+    outline: none;
+    border-color: #2563eb;
+
+}
+
 /* Footer */
 footer {
     background: #2c3e50;

@@ -19,7 +19,7 @@ class Produto {
 //
 const listaDeProdutos = [];
 
-// 🆕 Variável de controle do PDF - null = Modo Cadastro, número = Modo Edição
+// Variável de controle - null = Modo Cadastro, número = Modo Edição
 let indiceEdicao = null;
 
 //
@@ -51,20 +51,45 @@ const btnLimparTudo = document.getElementById("limpar-tabela");
 const totalEstoqueEl = document.getElementById("total-estoque");
 const btnSubmit = document.querySelector(".btn-primary");
 
+//NOVIDADE V4: Captura do novo elemento de input de busca
+
+const campoBusca = document.querySelector("campo-busca");
+
+//NOVIDADE V4: Função inteligente de filtragem (.filter())
+//A função analisa oque foi digitado
+//Produtos que correspondem ao filtro
+function obterProdutosfiltrados(){
+
+    //Sanitizar o termo de busca e converter para minúsculas
+    const termo = campoBusca.value.trim().toLowerCase();
+
+    //Se a busca estiver vazia, retorna a lista completa
+    if(!termo){
+
+        return listaDeProdutos;
+
+    }
+
+    //Usa método de alta performance .filter()
+    return listaDeProdutos.filter(produto => produto.nome.toLowerCase().includes(termo));
+
+}
+
+
 //
-// FASE 4: Escuta de Eventos - COM VALIDAÇÃO DO PDF
+// FASE 4: Escuta de Eventos - COM VALIDAÇÃO
 //
 
 // 1. Adicionar / Atualizar Produto pelo Formulário
 formProduto.addEventListener("submit", function (event) {
     event.preventDefault();
 
-    // 🆕 FASE VALIDAÇÃO - Sanitização com .trim() + parse
+    // Sanitização com .trim() + parse
     const nome = document.getElementById("nome").value.trim();
     const preco = parseFloat(document.getElementById("preco").value);
     const quantidade = parseInt(document.getElementById("quantidade").value);
 
-    // 🆕 Guard Clause - Retorno antecipado (evita if/else aninhado)
+    // Guard Clause - Retorno antecipado
     if (!nome) {
         alert("Por favor, informe um nome válido para o produto.");
         return;
@@ -78,7 +103,7 @@ formProduto.addEventListener("submit", function (event) {
     // Dados válidos: cria objeto
     const novoProduto = new Produto(nome, preco, quantidade);
 
-    // 🆕 FASE 4 - Lógica de Atualização (Update) do PDF
+    // Lógica de Atualização (Update)
     if (indiceEdicao === null) {
         // Modo Inclusão
         listaDeProdutos.push(novoProduto);
@@ -133,7 +158,7 @@ function removerProduto(index) {
     atualizarInterface();
 }
 
-// 🆕 FASE 3 - Preparar Edição (do PDF)
+// Preparar Edição
 function prepararEdicao(index) {
     const produto = listaDeProdutos[index];
 
@@ -159,7 +184,7 @@ function atualizarTotalEstoque() {
     totalEstoqueEl.textContent = `Total em Estoque: R$ ${total.toFixed(2)}`;
 }
 
-// 🆕 Desafio Prático: renderizar com botão Editar
+// Renderizar com botão Editar - CORRIGIDO
 function renderizarTabela() {
     const tabelaBody = document.querySelector("#tabela-produtos tbody");
     tabelaBody.innerHTML = "";
@@ -177,12 +202,12 @@ function renderizarTabela() {
                 <button class="btn-remover">Remover</button>
             </td>
         `;
-        btnEditar.addEventListener("click", () => prepararEdicao(index));
 
-
-        const btnRemover = linha.querySelector(".btn-remover");
+        // CORREÇÃO: primeiro busca os botões, depois adiciona o evento
         const btnEditar = linha.querySelector(".btn-editar");
+        const btnRemover = linha.querySelector(".btn-remover");
 
+        btnEditar.addEventListener("click", () => prepararEdicao(index));
         btnRemover.addEventListener("click", () => removerProduto(index));
         
         tabelaBody.appendChild(linha);
